@@ -5,6 +5,7 @@
 //  Created by Yuwen on 2026-05-02.
 //
 
+import SwiftData
 import SwiftUI
 
 @main
@@ -13,5 +14,10 @@ struct RunInsightApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [
+            RunWorkoutRecord.self,
+            RunningShoe.self,
+            WorkoutShoeAssignment.self
+        ])
     }
 }
