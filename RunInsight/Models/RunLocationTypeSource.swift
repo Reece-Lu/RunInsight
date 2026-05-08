@@ -18,11 +18,11 @@ enum RunLocationTypeSource: String, Codable, Hashable {
         case .healthKit:
             "HealthKit"
         case .routeInferred:
-            "路线推断"
+            "路线推断".localized
         case .manual:
-            "手动"
+            "手动".localized
         case .unknown:
-            "未知"
+            "未知".localized
         }
     }
 }

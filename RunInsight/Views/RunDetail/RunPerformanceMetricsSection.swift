@@ -77,7 +77,10 @@ struct RunPerformanceMetricsSection: View {
                let metric = RunMetricChart(series: metricSeries, elapsedText: workout.duration.durationText) {
                 RunMetricChartCard(metric: metric)
             } else {
-                RunMetricUnavailableCard(title: kind.title, message: "这次跑步没有 \(kind.title) 数据。")
+                RunMetricUnavailableCard(
+                    title: kind.title,
+                    message: String(format: NSLocalizedString("这次跑步没有 %@ 数据。", comment: ""), kind.title)
+                )
             }
 
         case .failed(let message):
@@ -99,11 +102,11 @@ struct RunMetricChartCard: View {
                     .background(metric.tint.opacity(0.12), in: Circle())
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(metric.title)
-                        .font(.headline)
+                Text(metric.title.localized)
+                    .font(.headline)
 
-                    Text(metric.primaryText)
-                        .font(.subheadline.weight(.semibold))
+                Text(metric.primaryText.localized)
+                    .font(.subheadline.weight(.semibold))
                         .foregroundStyle(metric.tint)
                 }
 
@@ -121,7 +124,7 @@ struct RunMetricChartCard: View {
             HStack {
                 Text("0:00")
                 Spacer()
-                Text("Elapsed: \(metric.elapsedText)")
+                Text(String(format: NSLocalizedString("Elapsed: %@", comment: ""), metric.elapsedText))
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -139,7 +142,7 @@ private struct RunMetricLoadingCard: View {
             ProgressView()
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(title.localized)
                     .font(.headline)
 
                 Text("正在读取数据...")
@@ -167,10 +170,10 @@ private struct RunMetricUnavailableCard: View {
                 .background(Color.primary.opacity(0.06), in: Circle())
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
+                Text(title.localized)
                     .font(.headline)
 
-                Text(message)
+                Text(message.localized)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -315,7 +318,7 @@ extension RunMetricChart {
         let kind = series.kind
         self.init(
             title: kind.title,
-            primaryText: "平均 \(kind.formatAverage(averageValue))",
+            primaryText: String(format: NSLocalizedString("平均 %@", comment: ""), kind.formatAverage(averageValue)),
             rangeText: "\(kind.formatRangeValue(minValue))-\(kind.formatRangeValue(maxValue))",
             elapsedText: elapsedText,
             systemImage: kind.systemImage,
@@ -330,17 +333,17 @@ private extension RunWorkoutMetricKind {
     var title: String {
         switch self {
         case .heartRate:
-            "心率"
+            "心率".localized
         case .power:
-            "功率"
+            "功率".localized
         case .cadence:
-            "步频"
+            "步频".localized
         case .verticalOscillation:
-            "垂直振幅"
+            "垂直振幅".localized
         case .groundContactTime:
-            "触地时间"
+            "触地时间".localized
         case .strideLength:
-            "步幅"
+            "步幅".localized
         }
     }
 
@@ -437,8 +440,8 @@ private struct RunRouteAnalytics {
         }
 
         return RunMetricChart(
-            title: "海拔",
-            primaryText: "爬升 \(Int(elevationGain.rounded())) m",
+            title: "海拔".localized,
+            primaryText: String(format: NSLocalizedString("爬升 %d m", comment: ""), Int(elevationGain.rounded())),
             rangeText: "\(Int(minElevation.rounded()))-\(Int(maxElevation.rounded())) m",
             elapsedText: workout.duration.durationText,
             systemImage: "mountain.2.fill",
@@ -457,8 +460,8 @@ private struct RunRouteAnalytics {
         }
 
         return RunMetricChart(
-            title: "配速",
-            primaryText: "平均 \(workout.paceText)",
+            title: "配速".localized,
+            primaryText: String(format: NSLocalizedString("平均 %@", comment: ""), workout.paceText),
             rangeText: "\(minPace.paceText)-\(maxPace.paceText)",
             elapsedText: workout.duration.durationText,
             systemImage: "speedometer",
@@ -477,8 +480,8 @@ private struct RunRouteAnalytics {
         }
 
         return RunMetricChart(
-            title: "速度",
-            primaryText: "平均 \(averageSpeedText)",
+            title: "速度".localized,
+            primaryText: String(format: NSLocalizedString("平均 %@", comment: ""), averageSpeedText),
             rangeText: "\(minSpeed.speedText)-\(maxSpeed.speedText)",
             elapsedText: workout.duration.durationText,
             systemImage: "gauge.with.dots.needle.bottom.100percent",

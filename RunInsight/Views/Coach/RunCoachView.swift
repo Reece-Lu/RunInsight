@@ -7,6 +7,7 @@ struct RunCoachView: View {
     @State private var selectedWorkoutID: UUID?
     @State private var isManagingAPIKey = false
     @State private var question = ""
+    @FocusState private var isQuestionFocused: Bool
 
     private var selectedWorkout: RunWorkout? {
         if let selectedWorkoutID,
@@ -22,35 +23,48 @@ struct RunCoachView: View {
             ZStack {
                 AppBackground()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        apiKeyCard
-                        workoutPickerSection
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            apiKeyCard
+                            workoutPickerSection
 
-                        if let selectedWorkout {
-                            privacyCard
-                            actionSection(for: selectedWorkout)
-                            conversationSection
-                            questionSection(for: selectedWorkout)
-                        } else {
-                            emptyRunsCard
+                            if let selectedWorkout {
+                                privacyCard
+                                actionSection(for: selectedWorkout)
+                                conversationSection
+                                questionSection(for: selectedWorkout)
+                                    .id(CoachScrollTarget.questionComposer)
+                            } else {
+                                emptyRunsCard
+                            }
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, isQuestionFocused ? 112 : 28)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 28)
+                    .scrollDismissesKeyboard(.interactively)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        isQuestionFocused = false
+                    }
+                    .onChange(of: isQuestionFocused) {
+                        scrollToQuestionComposerIfNeeded(with: scrollProxy)
+                    }
                 }
             }
             .navigationTitle("AI 教练")
             .toolbar {
-                Button {
-                    isManagingAPIKey = true
-                } label: {
-                    Label("管理密钥", systemImage: "key")
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        isManagingAPIKey = true
+                    } label: {
+                        Label("管理密钥", systemImage: "key")
+                    }
                 }
             }
             .sheet(isPresented: $isManagingAPIKey) {
-                OpenAIAPIKeyView(viewModel: viewModel)
+                AIServiceSettingsView(viewModel: viewModel)
             }
             .onAppear {
                 if selectedWorkoutID == nil {
@@ -70,28 +84,41 @@ struct RunCoachView: View {
     }
 
     private var apiKeyCard: some View {
-        HStack(spacing: 12) {
-            Image(systemName: viewModel.hasAPIKey ? "checkmark.seal.fill" : "key.fill")
-                .font(.headline)
-                .foregroundStyle(viewModel.hasAPIKey ? .green : .orange)
-                .frame(width: 34, height: 34)
-                .background((viewModel.hasAPIKey ? Color.green : Color.orange).opacity(0.12), in: Circle())
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("OpenAI API")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: viewModel.hasAPIKey ? "checkmark.seal.fill" : "key.fill")
                     .font(.headline)
+                    .foregroundStyle(viewModel.hasAPIKey ? .green : .orange)
+                    .frame(width: 34, height: 34)
+                    .background((viewModel.hasAPIKey ? Color.green : Color.orange).opacity(0.12), in: Circle())
 
-                Text(viewModel.apiKeyStatusMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(viewModel.selectedProvider.apiTitle)
+                        .font(.headline)
+
+                    Text(viewModel.apiKeyStatusMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Button("管理") {
+                    isManagingAPIKey = true
+                }
+                .buttonStyle(.bordered)
             }
 
-            Spacer()
-
-            Button("管理") {
-                isManagingAPIKey = true
+            Picker("模型服务", selection: Binding(
+                get: { viewModel.selectedProvider },
+                set: { viewModel.selectedProvider = $0 }
+            )) {
+                ForEach(AIProvider.allCases) { provider in
+                    Text(provider.displayName).tag(provider)
+                }
             }
-            .buttonStyle(.bordered)
+            .pickerStyle(.segmented)
+            .disabled(viewModel.state == .loading)
         }
         .padding(16)
         .cardStyle()
@@ -190,9 +217,7 @@ struct RunCoachView: View {
                 .font(.headline)
 
             if viewModel.messages.isEmpty {
-                EmptyCoachConversationCard {
-                    isManagingAPIKey = true
-                }
+                EmptyCoachConversationCard()
             } else {
                 VStack(spacing: 10) {
                     ForEach(viewModel.messages) { message in
@@ -208,29 +233,45 @@ struct RunCoachView: View {
             Text("继续提问")
                 .font(.headline)
 
-            HStack(alignment: .bottom, spacing: 10) {
-                TextField("例如：我哪里需要改进？", text: $question, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(1...4)
-
-                Button {
-                    let currentQuestion = question
-                    question = ""
-
-                    Task {
-                        await viewModel.ask(
-                            currentQuestion,
-                            workout: workout,
-                            selectedShoeName: selectedShoeName(workout)
-                        )
-                    }
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .font(.headline)
-                        .frame(width: 38, height: 38)
+            CoachQuestionComposer(
+                text: $question,
+                isFocused: $isQuestionFocused,
+                isEnabled: viewModel.hasAPIKey,
+                isLoading: viewModel.state == .loading,
+                send: {
+                    submitQuestion(for: workout)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(!viewModel.hasAPIKey || question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.state == .loading)
+            )
+        }
+    }
+
+    private func submitQuestion(for workout: RunWorkout) {
+        let currentQuestion = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard viewModel.hasAPIKey, !currentQuestion.isEmpty, viewModel.state != .loading else {
+            return
+        }
+
+        question = ""
+        isQuestionFocused = false
+
+        Task {
+            await viewModel.ask(
+                currentQuestion,
+                workout: workout,
+                selectedShoeName: selectedShoeName(workout)
+            )
+        }
+    }
+
+    private func scrollToQuestionComposerIfNeeded(with scrollProxy: ScrollViewProxy) {
+        guard isQuestionFocused else {
+            return
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(220))
+            withAnimation(.snappy(duration: 0.25)) {
+                scrollProxy.scrollTo(CoachScrollTarget.questionComposer, anchor: .center)
             }
         }
     }
@@ -256,6 +297,10 @@ struct RunCoachView: View {
     private func workoutPickerTitle(for workout: RunWorkout) -> String {
         "\(workout.startDate.formatted(date: .abbreviated, time: .omitted)) · \(workout.distanceText) · \(workout.paceText)"
     }
+}
+
+private enum CoachScrollTarget {
+    static let questionComposer = "coach-question-composer"
 }
 
 private struct SelectedRunCoachWorkoutCard: View {
@@ -290,7 +335,7 @@ private struct SelectedRunCoachWorkoutCard: View {
                 SummaryMetricTile(title: "时长", value: workout.durationText, systemImage: "timer", tint: .blue)
                 SummaryMetricTile(title: "配速", value: workout.paceText, systemImage: "speedometer", tint: .green)
                 SummaryMetricTile(title: "类型", value: workout.locationType.label, systemImage: workout.locationType.systemImage, tint: .orange)
-                SummaryMetricTile(title: "跑鞋", value: shoeName ?? "未绑定", systemImage: "shoeprints.fill", tint: .purple)
+                SummaryMetricTile(title: "跑鞋", value: shoeName ?? "未绑定".localized, systemImage: "shoeprints.fill", tint: .purple)
             }
         }
         .padding(16)
@@ -325,9 +370,101 @@ private struct RunCoachMessageBubble: View {
     }
 }
 
-private struct EmptyCoachConversationCard: View {
-    let manageAPIKey: () -> Void
+private struct CoachQuestionComposer: View {
+    @Binding var text: String
+    let isFocused: FocusState<Bool>.Binding
+    let isEnabled: Bool
+    let isLoading: Bool
+    let send: () -> Void
 
+    private var trimmedText: String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var canSend: Bool {
+        isEnabled && !trimmedText.isEmpty && !isLoading
+    }
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 10) {
+            inputContainer
+            sendButton
+        }
+        .padding(6)
+        .background(.background, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(.separator.opacity(0.25), lineWidth: 1)
+        }
+    }
+
+    private var inputContainer: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            inputField
+            clearButton
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 11)
+        .frame(minHeight: 50)
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(inputStrokeColor, lineWidth: 1)
+        }
+    }
+
+    private var inputField: some View {
+        TextField("问问这次跑步...", text: $text, axis: .vertical)
+            .focused(isFocused)
+            .font(.subheadline)
+            .lineLimit(1...5)
+            .submitLabel(.send)
+            .autocorrectionDisabled(false)
+            #if os(iOS)
+            .textInputAutocapitalization(.sentences)
+            #endif
+            .disabled(!isEnabled || isLoading)
+            .onSubmit {
+                if canSend {
+                    send()
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var clearButton: some View {
+        if !trimmedText.isEmpty {
+            Button {
+                text = ""
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("清空输入")
+        }
+    }
+
+    private var sendButton: some View {
+        Button(action: send) {
+            Image(systemName: isLoading ? "hourglass" : "paperplane.fill")
+                .font(.headline)
+                .frame(width: 50, height: 50)
+                .foregroundStyle(canSend ? .white : .secondary)
+                .background(canSend ? Color.blue : Color.primary.opacity(0.08), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSend)
+        .accessibilityLabel("发送问题")
+    }
+
+    private var inputStrokeColor: Color {
+        isFocused.wrappedValue ? Color.blue.opacity(0.45) : Color.primary.opacity(0.08)
+    }
+}
+
+private struct EmptyCoachConversationCard: View {
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: "sparkles")
@@ -344,13 +481,6 @@ private struct EmptyCoachConversationCard: View {
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
-
-            Button(action: manageAPIKey) {
-                Label("管理密钥", systemImage: "key")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity)
         .padding(18)
@@ -358,7 +488,7 @@ private struct EmptyCoachConversationCard: View {
     }
 }
 
-struct OpenAIAPIKeyView: View {
+struct AIServiceSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     let viewModel: RunCoachViewModel
     @State private var apiKey = ""
@@ -366,9 +496,27 @@ struct OpenAIAPIKeyView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("模型服务") {
+                    Picker("服务商", selection: Binding(
+                        get: { viewModel.selectedProvider },
+                        set: { viewModel.selectedProvider = $0 }
+                    )) {
+                        ForEach(AIProvider.allCases) { provider in
+                            Text(provider.displayName).tag(provider)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(viewModel.state == .loading)
+
+                    LabeledContent("模型", value: viewModel.selectedProvider.modelName)
+                }
+
                 Section("API Key") {
-                    SecureField("sk-...", text: $apiKey)
+                    SecureField(viewModel.selectedProvider.keyPlaceholder, text: $apiKey)
                         .autocorrectionDisabled()
+                        #if os(iOS)
+                        .textInputAutocapitalization(.never)
+                        #endif
 
                     Text(viewModel.apiKeyStatusMessage)
                         .font(.footnote)
@@ -392,10 +540,10 @@ struct OpenAIAPIKeyView: View {
                         }
                     }
                 } footer: {
-                    Text("密钥会保存到本机 Keychain。请求 OpenAI 时只发送当前选中跑步的摘要指标。")
+                    Text("密钥会保存到本机 Keychain。请求当前服务商时只发送当前选中跑步的摘要指标，不发送完整 GPS 轨迹。")
                 }
             }
-            .navigationTitle("OpenAI 密钥")
+            .navigationTitle("AI 服务")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

@@ -9,26 +9,26 @@ enum SummaryRange: CaseIterable, Hashable {
     var label: String {
         switch self {
         case .week:
-            "一周"
+            "一周".localized
         case .month:
-            "一月"
+            "一月".localized
         case .year:
-            "一年"
+            "一年".localized
         case .all:
-            "全部"
+            "全部".localized
         }
     }
 
     var summaryTitle: String {
         switch self {
         case .week:
-            "最近一周"
+            "最近一周".localized
         case .month:
-            "最近一月"
+            "最近一月".localized
         case .year:
-            "最近一年"
+            "最近一年".localized
         case .all:
-            "全部跑步"
+            "全部跑步".localized
         }
     }
 
@@ -66,11 +66,11 @@ enum RunLocationFilter: CaseIterable, Hashable {
     var label: String {
         switch self {
         case .all:
-            "全部"
+            "全部".localized
         case .outdoor:
-            "户外"
+            "户外".localized
         case .indoor:
-            "室内"
+            "室内".localized
         }
     }
 
@@ -96,4 +96,3 @@ enum RunLocationFilter: CaseIterable, Hashable {
         }
     }
 }
-

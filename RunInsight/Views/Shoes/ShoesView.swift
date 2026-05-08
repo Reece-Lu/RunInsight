@@ -109,7 +109,7 @@ struct ShoeCabinetSummary: View {
                     .padding(.bottom, 7)
             }
 
-            Text("\(shoes.count) 双跑鞋 · 给跑步记录选择跑鞋后自动累计")
+            Text(String(format: NSLocalizedString("%d 双跑鞋 · 给跑步记录选择跑鞋后自动累计", comment: ""), shoes.count))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
@@ -151,7 +151,7 @@ struct ShoeCabinetSummaryMetric: View {
                 .background(tint.opacity(0.12), in: Circle())
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(title.localized)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
@@ -187,7 +187,7 @@ struct ShoeCard: View {
 
                 HStack(spacing: 10) {
                     Label(distanceMeters.distanceText, systemImage: "road.lanes")
-                    Label("\(runCount) 次", systemImage: "figure.run")
+                    Label(String(format: NSLocalizedString("%d 次", comment: ""), runCount), systemImage: "figure.run")
                 }
                 .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
@@ -203,7 +203,7 @@ struct ShoeCard: View {
                     .background(.blue.opacity(0.12), in: Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("编辑 \(shoe.name)")
+            .accessibilityLabel(String(format: NSLocalizedString("编辑 %@", comment: ""), shoe.name))
         }
         .padding(14)
         .cardStyle()

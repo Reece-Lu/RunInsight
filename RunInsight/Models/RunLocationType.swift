@@ -15,11 +15,11 @@ enum RunLocationType: String, Codable, CaseIterable, Hashable {
     var label: String {
         switch self {
         case .outdoor:
-            "户外"
+            "户外".localized
         case .indoor:
-            "室内"
+            "室内".localized
         case .unknown:
-            "未知"
+            "未知".localized
         }
     }
 }

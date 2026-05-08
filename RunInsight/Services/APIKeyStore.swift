@@ -1,27 +1,31 @@
 //
-//  OpenAIAPIKeyStore.swift
+//  APIKeyStore.swift
 //  RunInsight
 //
-//  Created by Codex on 2026-05-05.
+//  Created by Codex on 2026-05-08.
 //
 
 import Foundation
 import Security
 
-enum OpenAIAPIKeyStoreError: LocalizedError {
+enum APIKeyStoreError: LocalizedError {
     case unexpectedStatus(OSStatus)
 
     var errorDescription: String? {
         switch self {
         case .unexpectedStatus(let status):
-            "Keychain operation failed with status \(status)."
+            String(format: NSLocalizedString("Keychain operation failed with status %d.", comment: ""), status)
         }
     }
 }
 
-struct OpenAIAPIKeyStore {
-    private let service = "RunInsight.OpenAI"
+struct APIKeyStore {
+    private let service: String
     private let account = "apiKey"
+
+    init(provider: AIProvider) {
+        service = provider.keychainService
+    }
 
     func apiKey() throws -> String? {
         var query = baseQuery
@@ -36,7 +40,7 @@ struct OpenAIAPIKeyStore {
         }
 
         guard status == errSecSuccess else {
-            throw OpenAIAPIKeyStoreError.unexpectedStatus(status)
+            throw APIKeyStoreError.unexpectedStatus(status)
         }
 
         guard let data = result as? Data else {
@@ -57,20 +61,20 @@ struct OpenAIAPIKeyStore {
             query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             let addStatus = SecItemAdd(query as CFDictionary, nil)
             guard addStatus == errSecSuccess else {
-                throw OpenAIAPIKeyStoreError.unexpectedStatus(addStatus)
+                throw APIKeyStoreError.unexpectedStatus(addStatus)
             }
             return
         }
 
         guard status == errSecSuccess else {
-            throw OpenAIAPIKeyStoreError.unexpectedStatus(status)
+            throw APIKeyStoreError.unexpectedStatus(status)
         }
     }
 
     func deleteAPIKey() throws {
         let status = SecItemDelete(baseQuery as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw OpenAIAPIKeyStoreError.unexpectedStatus(status)
+            throw APIKeyStoreError.unexpectedStatus(status)
         }
     }
 

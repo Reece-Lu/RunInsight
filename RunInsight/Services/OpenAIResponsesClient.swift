@@ -18,17 +18,17 @@ enum OpenAIClientError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            "OpenAI 返回了无效响应。"
+            "OpenAI 返回了无效响应。".localized
         case .requestFailed(let message):
             message
         case .missingOutput:
-            "OpenAI 没有返回文本内容。"
+            "OpenAI 没有返回文本内容。".localized
         case .networkUnavailable(let message):
-            "网络请求失败：\(message)"
+            String(format: NSLocalizedString("网络请求失败：%@", comment: ""), message)
         case .decodingFailed(let message):
-            "OpenAI 响应解析失败：\(message)"
+            String(format: NSLocalizedString("OpenAI 响应解析失败：%@", comment: ""), message)
         case .incomplete(let reason):
-            "OpenAI 这次没有生成完整回复：\(reason)"
+            String(format: NSLocalizedString("OpenAI 这次没有生成完整回复：%@", comment: ""), reason)
         }
     }
 }

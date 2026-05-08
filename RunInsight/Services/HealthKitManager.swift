@@ -16,9 +16,9 @@ enum HealthKitError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .healthDataUnavailable:
-            "Health data is not available on this device."
+            "健康数据不可用".localized
         case .workoutTypeUnavailable:
-            "Workout data is not available from HealthKit."
+            "运动数据不可用".localized
         }
     }
 }

@@ -185,7 +185,12 @@ struct RunSummaryView: View {
                 SummaryMetricTile(title: "总时长", value: totalDuration.durationText, systemImage: "timer", tint: .blue)
                 SummaryMetricTile(title: "平均配速", value: averagePace.paceText, systemImage: "speedometer", tint: .green)
                 SummaryMetricTile(title: "卡路里", value: totalCalories.caloriesText, systemImage: "flame.fill", tint: .red)
-                SummaryMetricTile(title: "记录数", value: "\(workouts.count) 次", systemImage: "list.bullet.clipboard", tint: .purple)
+                SummaryMetricTile(
+                    title: "记录数",
+                    value: String(format: NSLocalizedString("%d 次", comment: ""), workouts.count),
+                    systemImage: "list.bullet.clipboard",
+                    tint: .purple
+                )
             }
         }
         .padding(18)
@@ -228,10 +233,10 @@ struct NewRunsSyncBanner: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("检测到 \(pendingCount) 条新跑步记录")
+                    Text(String(format: NSLocalizedString("检测到 %d 条新跑步记录", comment: ""), pendingCount))
                         .font(.headline)
 
-                    Text("共 \(totalDistanceMeters.distanceText)。同步后会加入你的本地跑步数据库。")
+                    Text(String(format: NSLocalizedString("共 %@。同步后会加入你的本地跑步数据库。", comment: ""), totalDistanceMeters.distanceText))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -337,9 +342,9 @@ struct StateMessageView: View {
                 .foregroundStyle(.orange)
 
             VStack(spacing: 8) {
-                Text(title)
+                Text(title.localized)
                     .font(.title3.weight(.semibold))
-                Text(message)
+                Text(message.localized)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -351,7 +356,7 @@ struct StateMessageView: View {
                     await action()
                 }
             } label: {
-                Label(actionTitle, systemImage: "arrow.clockwise")
+                Label(actionTitle.localized, systemImage: "arrow.clockwise")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
             }

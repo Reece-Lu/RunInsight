@@ -45,7 +45,7 @@ struct FilterMenuLabel: View {
             Image(systemName: systemImage)
                 .font(.caption.weight(.semibold))
 
-            Text("\(title)：\(value)")
+            Text(String(format: NSLocalizedString("%@：%@", comment: ""), title.localized, value.localized))
                 .font(.footnote.weight(.semibold))
                 .lineLimit(1)
 
@@ -78,7 +78,7 @@ struct SummaryMetricTile: View {
                 .background(tint.opacity(0.12), in: Circle())
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(title.localized)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(value)
@@ -106,7 +106,7 @@ struct MetricView: View {
             Image(systemName: systemImage)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
-            Text(title)
+            Text(title.localized)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(value)

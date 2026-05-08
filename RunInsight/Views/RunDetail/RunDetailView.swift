@@ -188,10 +188,10 @@ struct RouteUnavailableCard: View {
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(.orange)
 
-            Text(title)
+            Text(title.localized)
                 .font(.headline)
 
-            Text(message)
+            Text(message.localized)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -240,13 +240,13 @@ struct DetailMetricRow: View {
                 .frame(width: 28, height: 28)
                 .background(.orange.opacity(0.12), in: Circle())
 
-            Text(title)
+            Text(title.localized)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             Spacer()
 
-            Text(value)
+            Text(value.localized)
                 .font(.subheadline.weight(.semibold))
                 .multilineTextAlignment(.trailing)
         }
@@ -262,13 +262,13 @@ struct RawHealthKitDataSection: View {
                 .font(.headline)
 
             VStack(alignment: .leading, spacing: 10) {
-                DetailMetricRow(title: "来源", value: workout.sourceName ?? "未知", systemImage: "applewatch")
+                DetailMetricRow(title: "来源", value: workout.sourceName ?? "未知".localized, systemImage: "applewatch")
                 DetailMetricRow(title: "识别结果", value: workout.locationType.label, systemImage: workout.locationType.systemImage)
                 DetailMetricRow(title: "判断来源", value: workout.locationTypeSource.label, systemImage: "scope")
                 DetailMetricRow(title: "Indoor 原始值", value: workout.indoorWorkoutRawValue ?? "missing", systemImage: "curlybraces")
-                DetailMetricRow(title: "是否有路线", value: workout.hasRoute ? "是" : "否", systemImage: "map")
+                DetailMetricRow(title: "是否有路线", value: workout.hasRoute ? "是".localized : "否".localized, systemImage: "map")
 
-                Text(workout.metadataText.isEmpty ? "没有 metadata" : workout.metadataText)
+                Text(workout.metadataText.isEmpty ? "没有 metadata".localized : workout.metadataText)
                     .font(.caption.monospaced())
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)

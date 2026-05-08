@@ -20,27 +20,41 @@ final class RunCoachViewModel {
     var messages: [RunCoachMessage] = []
     var apiKeyStatusMessage = ""
     var hasAPIKey = false
+    var selectedProvider: AIProvider {
+        didSet {
+            guard oldValue != selectedProvider else {
+                return
+            }
 
-    private let keyStore: OpenAIAPIKeyStore
+            UserDefaults.standard.set(selectedProvider.rawValue, forKey: Self.selectedProviderDefaultsKey)
+            refreshAPIKeyStatus()
+            resetConversation()
+        }
+    }
+
     private let openAIClient: OpenAIResponsesClient
+    private let qwenClient: QwenChatCompletionsClient
     private let healthKitManager: HealthKitManager
     private var analysisContext: RunCoachAnalysisContext?
 
     init(
-        keyStore: OpenAIAPIKeyStore = OpenAIAPIKeyStore(),
         openAIClient: OpenAIResponsesClient = OpenAIResponsesClient(),
+        qwenClient: QwenChatCompletionsClient = QwenChatCompletionsClient(),
         healthKitManager: HealthKitManager = HealthKitManager()
     ) {
-        self.keyStore = keyStore
         self.openAIClient = openAIClient
+        self.qwenClient = qwenClient
         self.healthKitManager = healthKitManager
+        selectedProvider = UserDefaults.standard.selectedAIProvider
         refreshAPIKeyStatus()
     }
 
     func refreshAPIKeyStatus() {
         do {
             hasAPIKey = try keyStore.apiKey()?.isEmpty == false
-            apiKeyStatusMessage = hasAPIKey ? "已配置 OpenAI API Key" : "还没有配置 OpenAI API Key"
+            apiKeyStatusMessage = hasAPIKey
+                ? String(format: NSLocalizedString("已配置 %@", comment: ""), selectedProvider.keyStatusName.localized)
+                : String(format: NSLocalizedString("还没有配置 %@", comment: ""), selectedProvider.keyStatusName.localized)
         } catch {
             hasAPIKey = false
             apiKeyStatusMessage = error.localizedDescription
@@ -78,7 +92,7 @@ final class RunCoachViewModel {
 
     func analyze(workout: RunWorkout, selectedShoeName: String?) async {
         await send(
-            userText: "请先总结并点评这次跑步，给出亮点、风险和下次训练建议。",
+            userText: "请先总结并点评这次跑步，给出亮点、风险和下次训练建议。".localized,
             workout: workout,
             selectedShoeName: selectedShoeName,
             appendUserMessage: false
@@ -110,9 +124,10 @@ final class RunCoachViewModel {
         }
 
         do {
-            guard let apiKey = try keyStore.apiKey(), !apiKey.isEmpty else {
+            let provider = selectedProvider
+            guard let apiKey = try APIKeyStore(provider: provider).apiKey(), !apiKey.isEmpty else {
                 hasAPIKey = false
-                state = .failed("请先填写 OpenAI API Key。")
+                state = .failed(String(format: NSLocalizedString("请先填写 %@。", comment: ""), provider.keyStatusName.localized))
                 return
             }
 
@@ -122,7 +137,8 @@ final class RunCoachViewModel {
             }
 
             let context = try await context(for: workout, selectedShoeName: selectedShoeName)
-            let response = try await openAIClient.response(
+            let response = try await response(
+                provider: provider,
                 apiKey: apiKey,
                 instructions: Self.instructions,
                 input: prompt(for: userText, context: context)
@@ -132,6 +148,24 @@ final class RunCoachViewModel {
             state = .idle
         } catch {
             state = .failed(error.localizedDescription)
+        }
+    }
+
+    private var keyStore: APIKeyStore {
+        APIKeyStore(provider: selectedProvider)
+    }
+
+    private func response(
+        provider: AIProvider,
+        apiKey: String,
+        instructions: String,
+        input: String
+    ) async throws -> String {
+        switch provider {
+        case .openAI:
+            try await openAIClient.response(apiKey: apiKey, instructions: instructions, input: input)
+        case .qwen:
+            try await qwenClient.response(apiKey: apiKey, instructions: instructions, input: input)
         }
     }
 
@@ -155,29 +189,49 @@ final class RunCoachViewModel {
         let transcript = messages
             .suffix(8)
             .map { message in
-                let role = message.role == .user ? "用户" : "AI教练"
+                let role = message.role == .user ? "用户".localized : "AI教练".localized
                 return "\(role): \(message.text)"
             }
             .joined(separator: "\n\n")
 
         return """
-        当前跑步数据如下：
+        \("当前跑步数据如下：".localized)
         \(context.promptText)
 
-        最近对话：
-        \(transcript.isEmpty ? "暂无" : transcript)
+        \("最近对话：".localized)
+        \(transcript.isEmpty ? "暂无".localized : transcript)
 
-        用户当前问题：
+        \("用户当前问题：".localized)
         \(userText)
         """
     }
 
-    private static let instructions = """
-    你是 RunInsight 里的中文跑步教练。你只能基于用户提供的跑步摘要、运动指标摘要和对话内容分析，不要声称看到了未提供的数据。
-    回答要具体、温和、可执行。优先解释配速、心率、步频、步幅、功率、触地时间、垂直振幅等指标之间的关系。
-    不提供医疗诊断；如果涉及疼痛、胸闷、异常心率或受伤风险，建议用户咨询专业人士。
-    默认使用简洁中文，结构为：总结、观察、建议。不要输出过长内容。
-    """
+    private static var instructions: String {
+        if Locale.preferredLanguages.first?.hasPrefix("zh") == true {
+            return """
+            你是 RunInsight 里的中文跑步教练。你只能基于用户提供的跑步摘要、运动指标摘要和对话内容分析，不要声称看到了未提供的数据。
+            回答要具体、温和、可执行。优先解释配速、心率、步频、步幅、功率、触地时间、垂直振幅等指标之间的关系。
+            不提供医疗诊断；如果涉及疼痛、胸闷、异常心率或受伤风险，建议用户咨询专业人士。
+            默认使用简洁中文，结构为：总结、观察、建议。不要输出过长内容。
+            """
+        }
+
+        return """
+        You are the running coach inside RunInsight. Analyze only the workout summary, metric summaries, and conversation provided by the user; do not claim to see data that was not provided.
+        Be specific, supportive, and actionable. Prioritize relationships between pace, heart rate, cadence, stride length, power, ground contact time, and vertical oscillation.
+        Do not provide medical diagnosis. If pain, chest tightness, abnormal heart rate, or injury risk appears, recommend consulting a qualified professional.
+        Reply in concise English with this structure: Summary, Observations, Suggestions. Keep the answer brief.
+        """
+    }
+
+    nonisolated fileprivate static let selectedProviderDefaultsKey = "RunInsight.SelectedAIProvider"
+}
+
+private extension UserDefaults {
+    var selectedAIProvider: AIProvider {
+        let rawValue = string(forKey: RunCoachViewModel.selectedProviderDefaultsKey)
+        return rawValue.flatMap(AIProvider.init(rawValue:)) ?? .openAI
+    }
 }
 
 private extension RunCoachMetricSummary {
@@ -201,17 +255,17 @@ private extension RunWorkoutMetricKind {
     var coachTitle: String {
         switch self {
         case .heartRate:
-            "心率"
+            "心率".localized
         case .power:
-            "功率"
+            "功率".localized
         case .cadence:
-            "步频"
+            "步频".localized
         case .verticalOscillation:
-            "垂直振幅"
+            "垂直振幅".localized
         case .groundContactTime:
-            "触地时间"
+            "触地时间".localized
         case .strideLength:
-            "步幅"
+            "步幅".localized
         }
     }
 
