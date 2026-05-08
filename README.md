@@ -1,32 +1,47 @@
-# RunInsight
+<p align="center">
+  <img src="RunInsight/Assets.xcassets/AppIcon.appiconset/RunInsightAppIcon.png" width="112" alt="RunInsight app icon">
+</p>
 
-RunInsight is an iOS running journal built with SwiftUI. It reads running workouts from HealthKit, keeps a local SwiftData copy, visualizes route and performance metrics, tracks shoe mileage, and includes an OpenAI-powered running coach for workout summaries and follow-up questions.
+<h1 align="center">RunInsight</h1>
 
-## Features
+<p align="center">
+  一个更懂跑步记录的 iOS 跑步日志。同步 HealthKit 跑步数据，整理路线、配速、跑鞋与训练表现，并用 AI 帮你读懂每一次有氧跑。
+</p>
 
-- HealthKit running workout import
-- Local workout history with SwiftData
-- Indoor/outdoor classification from HealthKit metadata and route availability
-- Route map with start and finish markers
-- Running start-location map linked to filters
-- Summary filters by time range and run type
-- Running shoe cabinet with mileage and run counts
-- Unassigned shoe mileage summary
-- Add and edit shoe names and photos
-- Workout detail metrics for distance, duration, pace, calories, route status, and shoes
-- Performance charts for elevation, pace, speed, heart rate, running power, cadence, vertical oscillation, ground contact time, and stride length
-- Interactive chart scrubbing to inspect values
-- AI Coach tab backed by the OpenAI Responses API
-- OpenAI API key storage in Keychain
-- AI analysis based on summarized workout metrics rather than raw GPS tracks
+<p align="center">
+  <img alt="SwiftUI" src="https://img.shields.io/badge/SwiftUI-iOS-3B86F6?style=flat-square">
+  <img alt="HealthKit" src="https://img.shields.io/badge/HealthKit-Workout-F69A45?style=flat-square">
+  <img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-AI%20Coach-68C96A?style=flat-square">
+</p>
+
+---
+
+## Product
+
+RunInsight 是一个为日常跑者设计的轻量训练伙伴。它不是复杂的竞技仪表盘，而是把你已经记录在 Apple Health 里的跑步，变成更容易回顾、比较和理解的训练记录。
+
+你可以查看每次跑步的距离、时长、配速、路线和表现指标；给跑步绑定跑鞋，自动累计鞋子的使用里程；也可以让 AI Coach 基于摘要数据分析一次训练，而不上传完整 GPS 轨迹。
+
+## Highlights
+
+- **跑步记录同步**：从 HealthKit 导入跑步训练，保留本地 SwiftData 副本。
+- **路线与详情回顾**：查看路线地图、起终点、室内/户外类型和关键训练指标。
+- **跑鞋管理**：为每次跑步绑定跑鞋，自动累计里程和使用次数。
+- **表现指标**：支持配速、心率、步频、步幅、跑步功率、垂直振幅、触地时间等数据展示。
+- **AI 教练**：选择一次跑步生成摘要分析，并继续提问训练建议。
+- **隐私优先**：AI 只接收统计摘要，不发送完整 GPS 坐标或逐点原始样本。
 
 ## Screens
 
-- **Run Dashboard**: recent mileage summary, filters, new-run sync banner, and start-location map.
-- **Records**: synced workout list with shoe assignment and detail navigation.
-- **Shoes**: shoe mileage cabinet, unassigned mileage, shoe photo/name editing.
-- **Workout Detail**: route map, workout facts, HealthKit metadata, and performance charts.
-- **AI Coach**: choose a run, generate a summary, and ask follow-up training questions.
+| 跑步记录 | 跑鞋 | AI 教练 |
+| --- | --- | --- |
+| 同步 HealthKit 跑步，按时间范围和室内/户外筛选。 | 记录每双跑鞋的累计里程、次数和照片。 | 基于训练摘要生成分析，并支持继续追问。 |
+
+## Privacy
+
+RunInsight 的跑步记录和跑鞋数据保存在本机。AI Coach 使用 OpenAI Responses API 时，只发送整理后的训练摘要，例如距离、时长、配速、消耗、跑鞋名称和聚合指标范围。
+
+不会发送完整 GPS 轨迹、逐点坐标或完整原始采样流。OpenAI API Key 存储在 iOS Keychain 中。
 
 ## Tech Stack
 
@@ -38,14 +53,6 @@ RunInsight is an iOS running journal built with SwiftUI. It reads running workou
 - Keychain Services
 - OpenAI Responses API
 
-## Privacy
-
-RunInsight stores imported workouts and shoe assignments locally with SwiftData.
-
-The AI Coach sends only a summarized workout context to OpenAI, such as distance, duration, pace, calories, shoe name, and aggregate metrics like average heart rate, cadence, stride length, power, and metric ranges. It does not send full raw GPS coordinates or complete per-sample workout streams.
-
-The OpenAI API key is stored locally in the iOS Keychain.
-
 ## Requirements
 
 - Xcode with iOS SDK support
@@ -54,7 +61,7 @@ The OpenAI API key is stored locally in the iOS Keychain.
 - Health data access granted by the user
 - OpenAI API key for AI Coach features
 
-Some HealthKit metrics, such as running power, vertical oscillation, ground contact time, and stride length, depend on the device and workout source. Runs that do not contain these samples will show unavailable metric cards.
+Some HealthKit metrics, such as running power, vertical oscillation, ground contact time, and stride length, depend on the device and workout source. Runs without those samples will show unavailable metric cards.
 
 ## Setup
 
@@ -62,7 +69,7 @@ Some HealthKit metrics, such as running power, vertical oscillation, ground cont
 2. Select the `RunInsight` scheme.
 3. Confirm the HealthKit capability is enabled.
 4. Build and run the app.
-5. In the app, sync running workouts from HealthKit.
+5. Sync running workouts from HealthKit.
 6. Open the AI Coach tab and add an OpenAI API key if you want AI analysis.
 
 ## Project Structure
@@ -75,10 +82,6 @@ RunInsight/
   Views/         SwiftUI screens and shared components
 ```
 
-## Current Status
-
-This is an early personal project. The app already supports local workout tracking, route visualization, shoe mileage, performance metrics, and a first version of AI coaching. Areas still evolving include deeper training insights, saved AI analysis history, richer charts, and test coverage.
-
 ## Roadmap
 
 - Save AI analysis history per workout
@@ -88,4 +91,3 @@ This is an early personal project. The app already supports local workout tracki
 - Add richer HealthKit metric summaries
 - Improve empty states and onboarding
 - Add unit tests for metric summarization and formatting
-
